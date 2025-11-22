@@ -1,5 +1,5 @@
 import re
-import sys
+import error
 
 TOKENS = [
     ("SKIP", r"[ \t\r\n]+"),             
@@ -31,18 +31,35 @@ class Token :
     def __repr__(self):
         return f"Token({self.type}, {self.value})"
     
+def well_parenthesized(text):
+    stack = []
+    pairs = {')': '(', ']': '[', '}': '{'}
+
+    for char in text:
+        if char in "([{":
+            stack.append(char)
+        elif char in ")]}":
+            if not stack or stack[-1] != pairs[char]:
+                return False
+            stack.pop()
+
+    return len(stack) == 0
+
 
 def lexer(text):
     tokens = []
-    for m in master_re.finditer(text):
-        typ = m.lastgroup
-        val = m.group(0)
-        if typ == "SKIP" or typ == "COMMENT":
-            continue
-        if typ == "PLUS" or typ == "MINUS":
-            if val[0] == val[-1] and val[0] in "\"'":
-                val = val[1:-1]
-        tokens.append(Token(typ, val))
-    tokens.append(Token("EOF", ""))
-    return tokens
+    if well_parenthesized(text):
+        for m in master_re.finditer(text):
+            typ = m.lastgroup
+            val = m.group(0)
+            if typ == "SKIP" or typ == "COMMENT":
+                continue
+            if typ == "PLUS" or typ == "MINUS":
+                if val[0] == val[-1] and val[0] in "\"'":
+                    val = val[1:-1]
+            tokens.append(Token(typ, val))
+        tokens.append(Token("EOF", ""))
+        return tokens, None
+    else:
+        return [], error.IllegalParenthesization(text)
         

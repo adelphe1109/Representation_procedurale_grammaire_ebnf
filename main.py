@@ -2,5 +2,9 @@ import lexer
 
 while(True):
     text = input('basic>')
-    result = lexer.lexer(text)
-    print(result)
+    result, error = lexer.lexer(text)
+
+    if error:
+        print(error.as_string())
+    else:
+        print(result)
