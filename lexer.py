@@ -4,7 +4,7 @@ import error
 TOKENS = [
     ("SKIP", r"[ \t\r\n]+"),             
     ("ID", r"[A-Za-z_][A-Za-z0-9_]*"),
-    #("STRING", r"'([^'\\]|\\.)*'|\"([^\"\\]|\\.)*\""),
+    ("STRING", r"'([^'\\]|\\.)*'|\"([^\"\\]|\\.)*\""),
     ("ASSIGN", r"="),
     ("PLUS", r"\"\+\""),
     ("MINUS", r"\"-\""),
@@ -54,9 +54,21 @@ def lexer(text):
             val = m.group(0)
             if typ == "SKIP" or typ == "COMMENT":
                 continue
-            if typ == "PLUS" or typ == "MINUS":
-                if val[0] == val[-1] and val[0] in "\"'":
-                    val = val[1:-1]
+            if typ == "STRING":
+                inner = val[1:-1]
+                inner = bytes(inner, "utf-8").decode("unicode_escape")
+                single_map = {
+                    "+": "PLUS", "-": "MINUS", "*": "MUL", "/": "DIV",
+                    "|": "OR", "{": "LBRACE", "}": "RBRACE",
+                    "[": "LBRACK", "]": "RBRACK", "(": "LPAREN",
+                    ")": "RPAREN", ",": "COMMA", ";": "SEMI", "=": "ASSIGN",
+                }
+                if len(inner) == 1 and inner in single_map:
+                    tokens.append(Token(single_map[inner], inner))
+                    continue
+                else:
+                    tokens.append(Token("STRING", inner))
+                    continue
             tokens.append(Token(typ, val))
         tokens.append(Token("EOF", ""))
         return tokens, None
