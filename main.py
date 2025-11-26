@@ -7,22 +7,25 @@ def run_parser_test(code):
     print(f"\n--- Analyse de : '{code}' ---")
     
     
-    tokens = lexer(code)
-    print("Tokens :", tokens)
+    tokens, error = lexer(code)
+    if error:
+        print(f"Erreur Lexicale : {error.as_string()}")
+    else:
+        print("Tokens :", tokens)
     
    
-    try:
-        parser = Parser(tokens)
-        
-        ast = parser.parse_Grammar()
-        
-        print("Analyse Réussie (AST) :", ast)
-        
-        if not parser.check("EOF"):
-            print(f"[ATTENTION] Jetons non consommés : {parser.current_token}")
+        try:
+            parser = Parser(tokens)
             
-    except Exception as e:
-        print(f"Erreur de compilation : {e}")
+            ast = parser.parse_Grammar()
+            
+            print("Analyse Réussie (AST) :", ast)
+            
+            if not parser.check("EOF"):
+                print(f"[ATTENTION] Jetons non consommés : {parser.current_token}")
+                
+        except Exception as e:
+            print(f"Erreur de compilation : {e}")
 
 
 
