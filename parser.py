@@ -1,4 +1,61 @@
-from lexer import Token 
+from lexer import Token
+
+class Node : pass
+
+class Grammar(Node):
+    def __init__(self, rules):
+        self.rules = rules
+    def __repr__(self):
+        return f"Grammar({self.rules})"
+
+class Rule(Node):
+    def __init__(self, name, definition):
+        self.name = name
+        self.definition = definition
+    def __repr__(self):
+        return f"Rule({self.name} , {self.definition})"
+
+class Or(Node):
+    def __init__(self, options):
+        self.options = options
+    def __repr__(self):
+        return f"Or({self.options})"
+
+class Sequence(Node):
+    def __init__(self, elements):
+        self.elements = elements
+    def __repr__(self):
+        return f"Sequence({self.elements})"
+
+class Repeat(Node):
+    def __init__(self, content):
+        self.content = content
+    def __repr__(self):
+        return f"Repeat({self.content})"
+
+class Optional(Node):
+    def __init__(self, content):
+        self.content = content
+    def __repr__(self):
+        return f"Optional({self.content})"
+
+class Group(Node):
+    def __init__(self, content):
+        self.content = content
+    def __repr__(self):
+        return f"Group({self.content})"
+
+class Terminal(Node):
+    def __init__(self, value):
+        self.value = value
+    def __repr__(self):
+        return f"Terminal('{self.value}')"
+
+class NonTerminal(Node):
+    def __init__(self, name):
+        self.name = name
+    def __repr__(self):
+        return f"NonTerminal({self.name})"
 
 class Parser:
     """Implémente un analyseur syntaxique pour une grammaire EBNF."""
@@ -36,12 +93,12 @@ class Parser:
         grammar_rules = []
         while not self.check("EOF"):
             grammar_rules.append(self.parse_Rule())
-        return ("GRAMMAR", grammar_rules)
+        return Grammar(grammar_rules)
 
    
     def parse_Rule(self):
         """Analyse une seule règle : ID = ... ;"""
-        rule_id = self.consume("ID").value
+        name = self.consume("ID").value
         self.consume("ASSIGN")
         
         # Le corps de la règle est une Expression_EBNF
@@ -49,7 +106,7 @@ class Parser:
         
         self.consume("SEMI")
         
-        return ("RULE", rule_id, definition)
+        return Rule(name, definition)
 
    
     def parse_Expression_EBNF(self):
@@ -63,7 +120,7 @@ class Parser:
             
         
         if len(alternatives) > 1:
-            return ("ALTERNATIVES", alternatives)
+            return Or(alternatives)
         else:
             return sequence
 
@@ -91,7 +148,7 @@ class Parser:
             
        
         if len(elements) > 1:
-            return ("SEQUENCE", elements)
+            return Sequence(elements)
         else:
             return elements[0]
 
@@ -105,29 +162,29 @@ class Parser:
             self.consume("LBRACE")
             content = self.parse_Expression_EBNF()
             self.consume("RBRACE")
-            return ("REPETITION", content)
+            return Repeat(content)
 
         
         elif self.check("LBRACK"):
             self.consume("LBRACK")
             content = self.parse_Expression_EBNF()
             self.consume("RBRACK")
-            return ("OPTIONNEL", content)
+            return Optional(content)
 
        
         elif self.check("LPAREN"):
             self.consume("LPAREN")
             content = self.parse_Expression_EBNF()
             self.consume("RPAREN")
-            return ("GROUP", content)
+            return Group(content)
         
         
         elif self.check("TERMINAL"):
-            return ("TERMINAL", self.consume("TERMINAL").value)
+            return Terminal(self.consume("TERMINAL").value)
 
         
         elif self.check("ID"):
-            return ("NON_TERMINAL", self.consume("ID").value)
+            return NonTerminal(self.consume("ID").value)
             
         
         else:

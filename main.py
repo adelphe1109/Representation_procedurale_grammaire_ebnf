@@ -1,6 +1,7 @@
 from lexer import lexer, Token
-from parser import Parser 
-import sys
+from parser import Parser
+from display import gen_proc_for_rule
+from colors import Color
 
 def run_parser_test(code):
     """Exécute l'analyse lexicale et syntaxique pour un code donné."""
@@ -9,20 +10,25 @@ def run_parser_test(code):
     
     tokens, error = lexer(code)
     if error:
-        print(f"Erreur Lexicale : {error.as_string()}")
+        print(f"{Color.Red}Erreur Lexicale : {error.as_string()}{Color.Reset}")
     else:
-        print("Tokens :", tokens)
+        print(f"{Color.Green}Tokens : {tokens}{Color.Reset}")
     
    
         try:
             parser = Parser(tokens)
             
             ast = parser.parse_Grammar()
+
             
-            print("Analyse Réussie (AST) :", ast)
+            print(f"{Color.Blue}Analyse Réussie (AST) : {ast}{Color.Reset}")
             
             if not parser.check("EOF"):
                 print(f"[ATTENTION] Jetons non consommés : {parser.current_token}")
+            
+            rules = ast.rules
+            lines = gen_proc_for_rule(rules[0])
+            print("\nCode Généré :\n", lines)
                 
         except Exception as e:
             print(f"Erreur de compilation : {e}")
@@ -34,6 +40,7 @@ if __name__ == "__main__":
     
     print("Test Critique : Règle complète avec terminaux.")
     run_parser_test('Expression = SExpr[("="|">"|"<")SExpr];')
+    run_parser_test('SExpr = ["+"|"-"]Term { ("+"|"-") Term } ;')
     
     
     run_parser_test('Liste = ID { "," ID } ;')
@@ -48,12 +55,19 @@ if __name__ == "__main__":
             if text.lower() == 'exit':
                 break
             
-            tokens = lexer(text)
-            print("Tokens:", tokens)
+            tokens, error = lexer(text)
+            if error:
+                print(f"{Color.Red}Erreur Lexicale : {error.as_string()}{Color.Reset}")
+            else:
+                print(f"{Color.Green}Tokens : {tokens}{Color.Reset}")
             
             parser = Parser(tokens)
             ast = parser.parse_Grammar()
-            print("AST:", ast)
+            print(f"{Color.Blue}AST : {ast}{Color.Reset}")
+
+            rules = ast.rules
+            lines = gen_proc_for_rule(rules[0])
+            print("\nReprésentation procédurale:\n", lines)
             
         except EOFError:
             break
