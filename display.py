@@ -21,6 +21,20 @@ def get_first_tokens(node):
         return list(set(tokens)) 
     return []
 
+def get_first_set(node):
+    if isinstance(node, NonTerminal):
+        return [node.name]
+    if isinstance(node, Group) or isinstance(node, Optional) or isinstance(node, Repeat):
+        return get_first_set(node.content)
+    if isinstance(node, Sequence):
+        return get_first_set(node.elements[0])
+    if isinstance(node, Or):
+        tokens = []
+        for option in node.options:
+            tokens.extend(get_first_set(option))
+        return list(set(tokens))
+    return []
+
 
 def gen_proc_for_rule(rule: Rule):
     lines = []
@@ -55,10 +69,15 @@ def gen_proc_for_node(node, ident=0):
     elif isinstance(node, Optional): 
         first_tokens = get_first_tokens(node.content)
         tokens_str = ", ".join(f"'{t}'" for t in first_tokens)
+
+        first_set = get_first_set(node.content)
+        set_str = ", ".join(f"{t}" for t in first_set)
+
         
-        lines.append(f"{ind}# Début OPTIONAL (First Set: {tokens_str})")
-        lines.append(f"{ind}if self.current_token.value in ({tokens_str}):")
         
+        lines.append(f"{ind}# Début OPTIONAL")
+        lines.append(f"{ind}if self.current_token.value in ({tokens_str + "," + set_str}):")
+            
         body = gen_proc_for_node(node.content, ident + 1)
         lines.extend(body)
         
@@ -70,12 +89,21 @@ def gen_proc_for_node(node, ident=0):
             first_tokens = get_first_tokens(option)
             tokens_str = ", ".join(f"'{t}'" for t in first_tokens)
             
+            if len(first_tokens) == 0:
+                first_set = get_first_set(option)
+                set_str = ", ".join(f"{t}" for t in first_set)
 
-            keyword = "if" if i == 0 else "elif"
-            
-            lines.append(f"{ind}{keyword} self.current_token.value in ({tokens_str}):")
-            body = gen_proc_for_node(option, ident + 1)
-            lines.extend(body)
+                keyword = "if" if i == 0 else "elif"
+                
+                lines.append(f"{ind}{keyword} self.current_token.type == 'NonTerminal' and self.current_token.valaue in ({set_str}):")
+                body = gen_proc_for_node(option, ident + 1)
+                lines.extend(body)
+            else:
+                keyword = "if" if i == 0 else "elif"
+                
+                lines.append(f"{ind}{keyword} self.current_token.value in ({tokens_str}):")
+                body = gen_proc_for_node(option, ident + 1)
+                lines.extend(body)
             
 
         lines.append(f"{ind}else:")
@@ -84,13 +112,21 @@ def gen_proc_for_node(node, ident=0):
     elif isinstance(node, Repeat):
         first_tokens = get_first_tokens(node.content)
         tokens_str = ", ".join(f"'{t}'" for t in first_tokens)
-        
-        lines.append(f"{ind}# Début REPEAT (First Set: {tokens_str})")
-        
+        if len(first_tokens) == 0:
+            first_set = get_first_set(node.content)
+            set_str = ", ".join(f"{t}" for t in first_set)
 
-        lines.append(f"{ind}while self.current_token.value in ({tokens_str}):")
-        
-        body = gen_proc_for_node(node.content, ident + 1)
-        lines.extend(body)
+            lines.append(f"{ind}while self.current_token.type = 'NonTerminal' and self.current_token.value in ({set_str}):")
+            body = gen_proc_for_node(node.content, ident + 1)
+            lines.extend(body)
+
+        else:
+            lines.append(f"{ind}# Début REPEAT (First Set: {tokens_str})")
+            
+
+            lines.append(f"{ind}while self.current_token.value in ({tokens_str}):")
+            
+            body = gen_proc_for_node(node.content, ident + 1)
+            lines.extend(body)
             
     return lines

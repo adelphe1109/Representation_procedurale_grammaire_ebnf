@@ -35,18 +35,43 @@ class Token :
         return f"Token({self.type}, {repr(self.value)})"
     
 def well_parenthesized(text):
-    stack = []
-    pairs = {')': '(', ']': '[', '}': '{'}
+    opening = {'(': ')', '{': '}', '[': ']'}
+    closing = {')': '(', '}': '{', ']': '['}
 
-    for char in text:
-        if char in "([{":
-            stack.append(char)
-        elif char in ")]}":
-            if not stack or stack[-1] != pairs[char]:
+    stack = []
+    in_string = False
+    string_char = None  # ' or "
+
+    for ch in text:
+        # Gestion des chaînes
+        if in_string:
+            if ch == string_char:
+                in_string = False
+            continue
+
+        # Début d'une chaîne
+        if ch in ('"', "'"):
+            in_string = True
+            string_char = ch
+            continue
+
+        # Si c'est un bracket ouvrant
+        if ch in opening:
+            stack.append(ch)
+            continue
+
+        # Si c'est un bracket fermant
+        if ch in closing:
+            if not stack:
+                return False
+            if stack[-1] != closing[ch]:
                 return False
             stack.pop()
 
-    return len(stack) == 0
+    # Expression bien formée si :
+    # - pas de string non fermée
+    # - pile vide
+    return not in_string and not stack
 
 
 def lexer(text):
